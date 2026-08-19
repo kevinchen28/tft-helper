@@ -2,8 +2,12 @@ import json, re, html, urllib.request, base64, ssl
 
 ctx = ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
 M = json.load(open('metatft_set18.json', encoding='utf-8'))
-ICONS = json.load(open('set18_embed.json', encoding='utf-8'))  # has trait iconData by name
-trait_icon = {t['name']: t.get('iconData') for t in ICONS['traits']}
+# trait icons are cached in the committed set18_full.json (all 36 are stable for the set)
+try:
+    _prev_icons = json.load(open('set18_full.json', encoding='utf-8'))
+    trait_icon = {t['name']: t.get('iconData') for t in _prev_icons.get('traits', []) if t.get('iconData')}
+except Exception:
+    trait_icon = {}
 roles = M['roles']
 
 STYLE = {1:'bronze', 3:'silver', 4:'gold', 5:'prismatic', 6:'unique'}

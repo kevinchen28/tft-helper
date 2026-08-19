@@ -121,6 +121,24 @@ select.chip{-webkit-appearance:none;appearance:none;padding-right:26px;backgroun
 .abd{font-size:12.5px;color:var(--muted);white-space:pre-line;line-height:1.5}
 .abd .num{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
 .tbd{color:var(--faint);font-style:italic;cursor:help}
+.tt{cursor:help}
+.traittip{position:fixed;top:0;left:0;z-index:60;max-width:300px;width:max-content;max-height:56vh;overflow:hidden;
+  background:var(--surface);border:1px solid var(--border);border-radius:13px;box-shadow:0 10px 34px rgba(0,0,0,.30);
+  padding:12px 13px;font-size:12.5px;color:var(--text);opacity:0;visibility:hidden;transition:opacity .12s;pointer-events:none}
+.traittip.on{opacity:1;visibility:visible}
+.traittip .tt-top{display:flex;gap:9px;align-items:center;margin-bottom:9px}
+.traittip .tt-badge{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 35%,#1b2a20,#0a120d);border:1px solid var(--border)}
+.traittip .tt-badge img{width:26px;height:26px;object-fit:contain}
+.traittip .tt-name{font-size:15px;font-weight:600;line-height:1.1}
+.traittip .tt-cat{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;margin-top:2px}
+.traittip .tt-cat.origin{color:var(--green-ink)} .traittip .tt-cat.class{color:var(--sky)}
+.traittip .tt-cat.unique{color:var(--gold)} .traittip .tt-cat.hidden{color:var(--violet)}
+.traittip .tt-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.traittip .tt-head{color:var(--muted);font-style:italic;margin-bottom:7px;line-height:1.45}
+.traittip .tt-brk{display:flex;gap:8px;padding:2.5px 0;line-height:1.4}
+.traittip .tt-brk b{color:var(--green-ink);font-variant-numeric:tabular-nums;flex:none;width:16px;text-align:right}
+.traittip .num{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
 .chint{font-size:10.5px;color:var(--faint);margin-top:9px} .cc.open .chint{display:none}
 
 /* comps */
@@ -431,6 +449,8 @@ footer b{color:var(--muted)}
   </footer>
 </div>
 
+<div id="traitTip" class="traittip"></div>
+
 <script>
 const DATA = __DATA__;
 document.getElementById('sChamp').textContent = DATA.champions.length;
@@ -443,6 +463,7 @@ const num = s => (s||'').replace(/(\d[\d.]*(?:\/\d[\d.]*)*%?)/g,'<span class="nu
   .replace(/\?/g,'<span class="tbd" title="value not published on PBE yet">?</span>');
 const itemChip = n => `<span class="itemchip">${ICONS[n]?`<img src="${ICONS[n]}" alt="">`:''}${n}</span>`;
 const tierName={S:'S',A:'A',B:'B',C:'C',T:'Tank'};
+const traitByName = Object.fromEntries(DATA.traits.map(t=>[t.name,t]));
 
 /* tabs */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
@@ -528,6 +549,31 @@ document.getElementById('metaRank').addEventListener('click',e=>{const on=e.targ
   if(!on){cFilter.carry=false;document.getElementById('carryOnly').setAttribute('aria-pressed','false');}renderChamps();});
 document.getElementById('traitSel').addEventListener('change',e=>{cFilter.trait=e.target.value;renderChamps();});
 renderChamps();
+
+/* trait tooltip on champion card chips */
+const tip=document.getElementById('traitTip');
+function traitTipHTML(t){
+  const pills=(t.breakpoints||[]).map(b=>`<span class="pill ${b.style}">${b.min}</span>`).join('');
+  const head=t.desc&&t.desc.header?`<div class="tt-head">${t.desc.header}</div>`:'';
+  const rows=(t.desc&&t.desc.rows||[]).map((r,i)=>{const bp=(t.breakpoints[i]||{}).min||'';
+    return `<div class="tt-brk"><b>${bp}</b><span>${num(r)}</span></div>`;}).join('');
+  const cl=t.cat==='Unique'?'Champion-unique':t.cat==='Hidden'?'Hidden combo':t.cat;
+  return `<div class="tt-top"><div class="tt-badge">${t.iconData?`<img src="${t.iconData}" alt="">`:''}</div>`
+    +`<div><div class="tt-name serif">${t.name}</div><div class="tt-cat ${t.cat.toLowerCase()}">${cl}</div></div></div>`
+    +`<div class="tt-pills">${pills}</div>${head}<div class="tt-rows">${rows}</div>`;
+}
+function showTip(t,el){
+  tip.innerHTML=traitTipHTML(t); tip.classList.add('on');
+  const r=el.getBoundingClientRect(), tr=tip.getBoundingClientRect();
+  let top=r.top-tr.height-8; if(top<8) top=r.bottom+8;
+  let left=Math.min(Math.max(8,r.left), innerWidth-tr.width-8);
+  tip.style.top=top+'px'; tip.style.left=left+'px';
+}
+const hideTip=()=>tip.classList.remove('on');
+cgrid.addEventListener('mouseover',e=>{const c=e.target.closest('.tt');
+  if(c&&cgrid.contains(c)){const t=traitByName[c.textContent.trim()]; if(t)showTip(t,c);}});
+cgrid.addEventListener('mouseout',e=>{if(e.target.closest('.tt'))hideTip();});
+window.addEventListener('scroll',hideTip,true);
 
 /* traits */
 const grid=document.getElementById('grid');

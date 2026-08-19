@@ -139,6 +139,22 @@ select.chip{-webkit-appearance:none;appearance:none;padding-right:26px;backgroun
 .traittip .tt-brk{display:flex;gap:8px;padding:2.5px 0;line-height:1.4}
 .traittip .tt-brk b{color:var(--green-ink);font-variant-numeric:tabular-nums;flex:none;width:16px;text-align:right}
 .traittip .num{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.traittip .ct-top{display:flex;gap:9px;align-items:center;margin-bottom:8px}
+.traittip .ct-port{width:46px;height:46px;border-radius:9px;object-fit:cover;border:2px solid var(--border);flex:none;background:#0a120d}
+.traittip .ct-name{font-size:15px;font-weight:600;line-height:1.1}
+.traittip .ct-role{font-size:10.5px;color:var(--muted);margin-top:2px}
+.traittip .ct-dmg{font-size:9px;font-weight:800;letter-spacing:.05em;padding:1px 5px;border-radius:4px;color:#fff;margin-right:5px}
+.traittip .ct-dmg.AD{background:var(--ad)} .traittip .ct-dmg.AP{background:var(--ap)} .traittip .ct-dmg.Hybrid{background:var(--violet)}
+.traittip .ct-trs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.traittip .ct-tr{font-size:10.5px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--muted)}
+.traittip .ct-stats{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.traittip .ct-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.traittip .ct-meta b{color:var(--text);font-variant-numeric:tabular-nums}
+.traittip .ct-ab{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+.traittip .ct-abn{font-size:12.5px;font-weight:700;color:var(--green-ink);margin-bottom:3px}
+.traittip .ct-mana{font-size:10px;font-weight:600;color:var(--sky);background:color-mix(in srgb,var(--sky) 14%,transparent);padding:1px 5px;border-radius:5px}
+.traittip .ct-abd{font-size:11.5px;color:var(--muted);white-space:pre-line;line-height:1.45}
+.tu{cursor:help}
 .chint{font-size:10.5px;color:var(--faint);margin-top:9px} .cc.open .chint{display:none}
 
 /* comps */
@@ -562,8 +578,24 @@ function traitTipHTML(t){
     +`<div><div class="tt-name serif">${t.name}</div><div class="tt-cat ${t.cat.toLowerCase()}">${cl}</div></div></div>`
     +`<div class="tt-pills">${pills}</div>${head}<div class="tt-rows">${rows}</div>`;
 }
-function showTip(t,el){
-  tip.innerHTML=traitTipHTML(t); tip.classList.add('on');
+function champTipHTML(c){
+  const s=c.stats||{}, mt=c.meta;
+  const stat=(l,v)=>v==null?'':`<span class="sb">${l} <b>${v}</b></span>`;
+  const adline=s.adByStar?s.adByStar.join('/'):s.ad;
+  const traits=c.traits.map(t=>`<span class="ct-tr">${t}</span>`).join('');
+  const meta = mt&&!mt.tank ? `<div class="ct-meta"><span class="tierChip t${mt.tier}">Carry · ${mt.tier}</span> <b>${mt.avg}</b> avg · <b>${mt.games.toLocaleString()}</b> games${mt.rank?` · #${mt.rank}`:''}</div>`
+             : mt&&mt.tank ? `<div class="ct-meta"><span class="tierChip tT">Itemized tank</span> <b>${mt.avg}</b> avg place</div>` : '';
+  const items = mt&&(mt.items||[]).length ? `<div class="items" style="margin-top:6px">${mt.items.map(itemChip).join('')}</div>` : '';
+  const ability = c.ability&&c.ability.name ? `<div class="ct-ab"><div class="ct-abn">✦ ${c.ability.name}${s.mana?` <span class="ct-mana">${s.mana}</span>`:''}</div><div class="ct-abd">${num(c.ability.desc||'')}</div></div>` : '';
+  return `<div class="ct-top"><img class="ct-port" style="border-color:${costGem[c.cost]}" src="${c.portrait||''}" alt="">`
+    +`<div><div class="ct-name serif">${c.name}</div>`
+    +`<div class="ct-role"><span class="ct-dmg ${c.dmg}">${c.dmg}</span>◆ ${c.cost} · ${c.role}</div></div></div>`
+    +`<div class="ct-trs">${traits}</div>`
+    +`<div class="ct-stats">${stat('HP',s.hpByStar?s.hpByStar.join('/'):s.hp)}${stat('AD',adline)}${stat('AS',s.as)}${stat('Range',s.range)}${stat('Mana',s.mana)}</div>`
+    +`${meta}${items}${ability}`;
+}
+function showTip(html,el){
+  tip.innerHTML=html; tip.classList.add('on');
   const r=el.getBoundingClientRect(), tr=tip.getBoundingClientRect();
   let top=r.top-tr.height-8; if(top<8) top=r.bottom+8;
   let left=Math.min(Math.max(8,r.left), innerWidth-tr.width-8);
@@ -571,7 +603,7 @@ function showTip(t,el){
 }
 const hideTip=()=>tip.classList.remove('on');
 cgrid.addEventListener('mouseover',e=>{const c=e.target.closest('.tt');
-  if(c&&cgrid.contains(c)){const t=traitByName[c.textContent.trim()]; if(t)showTip(t,c);}});
+  if(c&&cgrid.contains(c)){const t=traitByName[c.textContent.trim()]; if(t)showTip(traitTipHTML(t),c);}});
 cgrid.addEventListener('mouseout',e=>{if(e.target.closest('.tt'))hideTip();});
 window.addEventListener('scroll',hideTip,true);
 
@@ -609,6 +641,10 @@ document.getElementById('tcat').addEventListener('click',e=>{const b=e.target.cl
   tFilter=b.dataset.f;[...e.currentTarget.children].forEach(c=>c.setAttribute('aria-pressed',c===b));renderTraits();});
 document.getElementById('tq').addEventListener('input',e=>{tQuery=e.target.value.toLowerCase().trim();renderTraits();});
 renderTraits();
+// champion tooltip on trait-card champion chips
+grid.addEventListener('mouseover',e=>{const u=e.target.closest('.tu');
+  if(u&&grid.contains(u)){const c=champByName[u.textContent.trim()]; if(c)showTip(champTipHTML(c),u);}});
+grid.addEventListener('mouseout',e=>{if(e.target.closest('.tu'))hideTip();});
 
 /* comps */
 const champByName=Object.fromEntries(DATA.champions.map(c=>[c.name,c]));

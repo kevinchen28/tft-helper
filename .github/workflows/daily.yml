@@ -2,8 +2,12 @@ name: Daily Codex refresh
 
 on:
   schedule:
-    - cron: "0 12 * * *"   # 08:00 America/New_York (EDT) — fetch fresh PBE data daily
-  workflow_dispatch: {}     # lets you run it on demand from the Actions tab
+    - cron: "0 12 * * *"          # 08:00 ET daily — the steady-state refresh
+    - cron: "0 16,18,20,22 * * *"  # 12/2/4/6pm ET — launch-week: auto-catch the PBE→live flip
+  workflow_dispatch: {}            # run on demand from the Actions tab
+  # The pipeline auto-detects live vs PBE, so the extra afternoon runs simply
+  # switch the site to live data the moment Set 18 goes ranked. Trim back to just
+  # the 08:00 cron once the meta settles (a few days post-launch).
 
 permissions:
   contents: write   # commit refreshed data back

@@ -8,10 +8,23 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-UA="Mozilla/5.0"
-curl -s -A "$UA" -o metatft_set18.json "https://data.metatft.com/lookups/TFTSet18_pbe_en_us.json"
-curl -s -A "$UA" -H "Referer: https://www.metatft.com/" -o mt_comps_data.json  "https://api-hc.metatft.com/tft-comps-api/comps_data?queue=PBE"
-curl -s -A "$UA" -H "Referer: https://www.metatft.com/" -o mt_comps_stats.json "https://api-hc.metatft.com/tft-comps-api/comps_stats?queue=PBE&patch=current&days=3&permit_filter_adjustment=true"
+UA="Mozilla/5.0"; REF="Referer: https://www.metatft.com/"
+COMPS="https://api-hc.metatft.com/tft-comps-api"
+
+# Champion/trait/item data: the `latest` branch is the live game data
+# (pre-launch it mirrors PBE; it flips to live automatically at launch).
+curl -s -A "$UA" -o metatft_set18.json "https://data.metatft.com/lookups/TFTSet18_latest_en_us.json"
+
+# Comps: prefer live Ranked (queue 1100) once it actually serves Set 18.
+# Before launch that queue still returns the previous set, so fall back to PBE.
+live_set=$(curl -s -A "$UA" -H "$REF" "$COMPS/comps_data?queue=1100" \
+  | python -c "import sys,json;print(json.load(sys.stdin).get('results',{}).get('data',{}).get('tft_set',''))" 2>/dev/null || true)
+if [ "$live_set" = "TFTSet18" ]; then Q=1100; SRC="Live"; else Q=PBE; SRC="PBE"; fi
+echo "comps source: queue=$Q ($SRC)"
+printf '%s' "$SRC" > data_source.txt
+
+curl -s -A "$UA" -H "$REF" -o mt_comps_data.json  "$COMPS/comps_data?queue=$Q"
+curl -s -A "$UA" -H "$REF" -o mt_comps_stats.json "$COMPS/comps_stats?queue=$Q&patch=current&days=3&permit_filter_adjustment=true"
 
 python extract_full.py
 python enrich_meta.py

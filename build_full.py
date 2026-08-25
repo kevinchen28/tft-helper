@@ -39,6 +39,9 @@ header{position:relative;overflow:hidden;border-bottom:1px solid var(--border);
              radial-gradient(120% 120% at 6% 0%,color-mix(in srgb,var(--green) 15%,transparent),transparent 52%),var(--bg2);}
 .head-in{max-width:1180px;margin:0 auto;padding:32px 20px 26px;position:relative;}
 .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--green-ink);font-weight:600;}
+.srcpill{font-size:10px;font-weight:800;letter-spacing:.09em;padding:2px 8px;border-radius:6px;margin-left:6px;vertical-align:middle;}
+.srcpill.pbe{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);}
+.srcpill.live{background:color-mix(in srgb,var(--green) 20%,transparent);color:var(--green-ink);border:1px solid color-mix(in srgb,var(--green) 48%,transparent);}
 h1{font-size:clamp(32px,5.5vw,54px);margin:.1em 0 .12em;line-height:1.02;font-weight:600;text-wrap:balance;letter-spacing:-.01em;}
 .sub{color:var(--muted);max-width:62ch;font-size:15px;}
 .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
@@ -316,7 +319,7 @@ footer b{color:var(--muted)}
 <header>
   <button class="theme" id="themeBtn" aria-label="Toggle theme">🌙 <span id="themeTxt">Auto</span></button>
   <div class="head-in">
-    <div class="eyebrow">Teamfight Tactics · Set 18</div>
+    <div class="eyebrow">Teamfight Tactics · Set 18 <span class="srcpill" id="srcPill"></span></div>
     <h1 class="serif">Enchanted Wilds Codex</h1>
     <p class="sub">Every champion and trait in the enchanted forest — portraits, roles, carries, breakpoints, and resolved ability numbers. Tap any card to open its details.</p>
     <div class="stats">
@@ -460,7 +463,7 @@ footer b{color:var(--muted)}
   </section>
 
   <footer>
-    <span>Champions, portraits &amp; items from <b>MetaTFT</b> · trait icons from <b>CommunityDragon</b>. Carry tiers, avg placement &amp; best-in-slot items aggregated from live <b>PBE ranked comps</b> — early data, will shift before launch.</span>
+    <span>Champions, portraits &amp; items from <b>MetaTFT</b> · trait icons from <b>CommunityDragon</b>. Carry tiers, avg placement &amp; best-in-slot items aggregated from <b id="srcFoot">PBE ranked comps</b>.</span>
     <span>Set 18 · <b>Enchanted Wilds</b> · launches Aug 26 2026</span>
   </footer>
 </div>
@@ -469,6 +472,10 @@ footer b{color:var(--muted)}
 
 <script>
 const DATA = __DATA__;
+{const SRC=DATA.source||'PBE', isLive=/^live/i.test(SRC);
+ const sp=document.getElementById('srcPill');
+ if(sp){sp.textContent=isLive?'LIVE':'PBE';sp.className='srcpill '+(isLive?'live':'pbe');sp.title=isLive?'Live ranked data':'PBE data — pre-launch, will shift';}
+ const sf=document.getElementById('srcFoot'); if(sf) sf.textContent=isLive?'live ranked comps':'PBE ranked comps (pre-launch, early data)';}
 document.getElementById('sChamp').textContent = DATA.champions.length;
 document.getElementById('sTrait').textContent = DATA.traits.length;
 document.getElementById('sCarry').textContent = DATA.champions.filter(c=>c.carry).length;

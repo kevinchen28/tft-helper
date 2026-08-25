@@ -72,6 +72,10 @@ for it in needicons:
 comps.sort(key=lambda x:-x['games'])
 full['itemIcons']=icons
 full['comps']=comps
+try:
+    full['source']=open('data_source.txt',encoding='utf-8').read().strip() or 'PBE'
+except Exception:
+    full['source']='PBE'
 json.dump(full,open('set18_full.json','w',encoding='utf-8'),ensure_ascii=False)
 import os
 print('comps:',len(comps),'| new item icons:',added,'| total icons:',len(icons))

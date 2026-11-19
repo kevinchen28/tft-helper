@@ -1,9 +1,9 @@
-"""Enchanted Wilds Codex — consolidated QA. Run: python qa.py
+"""Codex — consolidated QA. Run: python qa.py
 Reports data-integrity + static CSS contrast-risk issues. Exit 0 = clean."""
-import json, re, sys
+import json, re, sys, config
 
-d=json.load(open('set18_full.json',encoding='utf-8'))
-HTML=open('set18_explorer.html',encoding='utf-8').read() if __import__('os').path.exists('set18_explorer.html') else ''
+d=json.load(open(config.DATA,encoding='utf-8'))
+HTML=open(config.HTML,encoding='utf-8').read() if __import__('os').path.exists(config.HTML) else ''
 issues=[]
 add=lambda cat,*rest: issues.append((cat,)+rest)
 def okimg(u): return isinstance(u,str) and u.startswith('data:image')
@@ -20,12 +20,14 @@ for c in d['champions']:
     if not desc: add('ABILITY_EMPTY',c['name'])
     elif len(desc)<25: add('ABILITY_SHORT',c['name'],len(desc))
     if not okimg(c.get('portrait','')): add('NO_PORTRAIT',c['name'])
-    if c['cost'] not in (1,2,3,4,5): add('BAD_COST',c['name'])
+    if not (isinstance(c['cost'],int) and 1<=c['cost']<=config.MAX_COST): add('BAD_COST',c['name'])
     for t in c['traits']:
         if t not in traitNames: add('CHAMP_TRAIT_MISSING',c['name'],t)
 # ---- DATA: traits ----
+# NOTE: a missing trait icon is cosmetic (the trait still renders name/breakpoints/
+# desc, and the UI shows a letter-fallback badge). New mid-set traits can lag in the
+# icon sources, so this is an informational gap below, NOT a blocking failure.
 for t in d['traits']:
-    if not okimg(t.get('iconData','')): add('TRAIT_NO_ICON',t['name'])
     if t['cat'] not in ('Origin','Class','Unique','Hidden'): add('BAD_CAT',t['name'])
     dd=t.get('desc',{})
     if not dd.get('header') and not dd.get('rows'): add('TRAIT_DESC_EMPTY',t['name'])
@@ -52,6 +54,8 @@ for c in d['champions']:
     s=c.get('stats',{})
     if not s.get('hp') or not s.get('ad'): source_gaps.append(('PBE_MISSING_STAT',c['name']))
     if '?' in c.get('ability',{}).get('desc',''): source_gaps.append(('PBE_MISSING_ABILITY_VALUE',c['name']))
+for t in d['traits']:
+    if not okimg(t.get('iconData','')): source_gaps.append(('MISSING_TRAIT_ICON',t['name']))
 
 # ---- STATIC CSS: contrast-risk lint (themed bg w/o explicit color on text elements) ----
 css=''

@@ -1,8 +1,18 @@
-import json
-d = json.load(open('set18_full.json', encoding='utf-8'))
+import json, config
+d = json.load(open(config.DATA, encoding='utf-8'))
 DATA = json.dumps(d, ensure_ascii=False)
+CFG = json.dumps({'set':config.SET,
+                  'costGem':{str(k):v for k,v in config.COST_COLORS.items()},
+                  'hidden':config.HIDDEN_TRAIT,
+                  'title':config.CODEX_TITLE}, ensure_ascii=False)
+_ACCENT = {'gold':'var(--gold)','violet':'var(--violet)','green':'var(--green-ink)','sky':'var(--sky)'}
+CALLOUTS = ''.join(
+    '<div class="call"><h3 style="color:%s"><span class="dot" style="background:%s"></span>%s</h3><p>%s</p></div>'
+    % (_ACCENT.get(c.get('accent'),'var(--gold)'), _ACCENT.get(c.get('accent'),'var(--gold)'), c['title'], c['body'])
+    for c in config.CALLOUTS)
+FOOTER = 'Set %d · <b>%s</b> · %s' % (config.SET, config.SET_NAME, config.LAUNCH)
 
-HTML = r'''<title>Enchanted Wilds Codex</title>
+HTML = r'''<title>__TITLE__</title>
 <style>
 :root{
   --bg:#eef2ea; --bg2:#e4ebe0; --surface:#ffffff; --surface2:#f5f8f2;
@@ -290,6 +300,8 @@ select.chip{-webkit-appearance:none;appearance:none;padding-right:26px;backgroun
 .crow{display:flex;gap:12px;align-items:center}
 .badge{width:46px;height:46px;border-radius:12px;flex:none;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#1b2a20,#0a120d);border:1px solid var(--border)}
 .badge img{width:34px;height:34px;object-fit:contain}
+.tfall{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-weight:700;font-size:20px;color:var(--green-ink)}
+.tt-badge .tfall{font-size:16px}
 .tname{font-size:17px;font-weight:600;line-height:1.15}
 .tcat{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-top:3px}
 .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
@@ -319,23 +331,20 @@ footer b{color:var(--muted)}
 <header>
   <button class="theme" id="themeBtn" aria-label="Toggle theme">🌙 <span id="themeTxt">Auto</span></button>
   <div class="head-in">
-    <div class="eyebrow">Teamfight Tactics · Set 18 <span class="srcpill" id="srcPill"></span></div>
-    <h1 class="serif">Enchanted Wilds Codex</h1>
-    <p class="sub">Every champion and trait in the enchanted forest — portraits, roles, carries, breakpoints, and resolved ability numbers. Tap any card to open its details.</p>
+    <div class="eyebrow">Teamfight Tactics · Set __SET__ <span class="srcpill" id="srcPill"></span></div>
+    <h1 class="serif">__TITLE__</h1>
+    <p class="sub">Every champion and trait in the set — portraits, roles, carries, breakpoints, and resolved ability numbers. Tap any card to open its details.</p>
     <div class="stats">
       <div class="stat"><b id="sChamp">0</b><span>Champions</span></div>
       <div class="stat"><b id="sTrait">0</b><span>Traits</span></div>
       <div class="stat"><b id="sCarry">0</b><span>Carries</span></div>
-      <div class="stat"><b id="sComp">0</b><span>PBE comps</span></div>
+      <div class="stat"><b id="sComp">0</b><span>Comps</span></div>
     </div>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="calls">
-    <div class="call wisp"><h3><span class="dot g"></span>New mechanic · Wisps</h3><p>Single-use magic that appears in the far-right shop slot every other round — combat power, gold, XP, or risky gambles. Buy one per round.</p></div>
-    <div class="call eclipse"><h3><span class="dot v"></span>Hidden trait · Eclipse</h3><p>Field <b style="color:var(--gold)">Solar</b> and <b style="color:var(--sky)">Lunar</b> together to unlock Eclipse — a beam that executes the lowest-health enemy on a timer.</p></div>
-  </div>
+  <div class="calls">__CALLOUTS__</div>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" aria-selected="true" data-view="champs">Champions</button>
@@ -373,7 +382,7 @@ footer b{color:var(--muted)}
   <section id="view-traits" class="hide">
     <div class="controls">
       <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
-        <input id="tq" type="search" placeholder="Search traits… (Lunar, Brawler, Coven)" autocomplete="off"></label>
+        <input id="tq" type="search" placeholder="Search traits…" autocomplete="off"></label>
       <div class="chips" id="tcat">
         <button class="chip" data-f="all" aria-pressed="true">All</button>
         <button class="chip" data-f="Origin" aria-pressed="false">Origins</button>
@@ -464,7 +473,7 @@ footer b{color:var(--muted)}
 
   <footer>
     <span>Champions, portraits &amp; items from <b>MetaTFT</b> · trait icons from <b>CommunityDragon</b>. Carry tiers, avg placement &amp; best-in-slot items aggregated from <b id="srcFoot">PBE ranked comps</b>.</span>
-    <span>Set 18 · <b>Enchanted Wilds</b> · launches Aug 26 2026</span>
+    <span>__FOOTER__</span>
   </footer>
 </div>
 
@@ -472,6 +481,7 @@ footer b{color:var(--muted)}
 
 <script>
 const DATA = __DATA__;
+const CFG = __CFG__;
 {const SRC=DATA.source||'PBE', isLive=/^live/i.test(SRC);
  const sp=document.getElementById('srcPill');
  if(sp){sp.textContent=isLive?'LIVE':'PBE';sp.className='srcpill '+(isLive?'live':'pbe');sp.title=isLive?'Live ranked data':'PBE data — pre-launch, will shift';}
@@ -480,7 +490,7 @@ document.getElementById('sChamp').textContent = DATA.champions.length;
 document.getElementById('sTrait').textContent = DATA.traits.length;
 document.getElementById('sCarry').textContent = DATA.champions.filter(c=>c.carry).length;
 document.getElementById('sComp').textContent = (DATA.comps||[]).length;
-const costGem={1:'#8a9a8d',2:'#3fae6a',3:'#2f8fd4',4:'#a06fe0',5:'#e0b23f'};
+const costGem=CFG.costGem;
 const ICONS=DATA.itemIcons||{};
 const num = s => (s||'').replace(/(\d[\d.]*(?:\/\d[\d.]*)*%?)/g,'<span class="num">$1</span>')
   .replace(/\?/g,'<span class="tbd" title="value not published on PBE yet">?</span>');
@@ -581,7 +591,7 @@ function traitTipHTML(t){
   const rows=(t.desc&&t.desc.rows||[]).map((r,i)=>{const bp=(t.breakpoints[i]||{}).min||'';
     return `<div class="tt-brk"><b>${bp}</b><span>${num(r)}</span></div>`;}).join('');
   const cl=t.cat==='Unique'?'Champion-unique':t.cat==='Hidden'?'Hidden combo':t.cat;
-  return `<div class="tt-top"><div class="tt-badge">${t.iconData?`<img src="${t.iconData}" alt="">`:''}</div>`
+  return `<div class="tt-top"><div class="tt-badge">${t.iconData?`<img src="${t.iconData}" alt="">`:`<span class="tfall">${t.name[0]}</span>`}</div>`
     +`<div><div class="tt-name serif">${t.name}</div><div class="tt-cat ${t.cat.toLowerCase()}">${cl}</div></div></div>`
     +`<div class="tt-pills">${pills}</div>${head}<div class="tt-rows">${rows}</div>`;
 }
@@ -626,7 +636,7 @@ function traitCard(t){
   const units=(t.units||[]).length?`<div class="tunits">${t.units.map(u=>`<span class="tu"><i style="background:${costGem[u.cost]}"></i>${u.name}</span>`).join('')}</div>`:'';
   el.innerHTML=`
     <div class="crow">
-      <div class="badge">${t.iconData?`<img src="${t.iconData}" alt="">`:''}</div>
+      <div class="badge">${t.iconData?`<img src="${t.iconData}" alt="">`:`<span class="tfall">${t.name[0]}</span>`}</div>
       <div><div class="tname serif">${t.name}</div><div class="tcat">${t.cat==='Unique'?'Champion-unique':t.cat==='Hidden'?'Hidden combo':t.cat}</div></div>
     </div>
     <div class="pills">${pills}</div>
@@ -706,7 +716,7 @@ renderComps();
 /* builder */
 (function(){
   const traitByName=Object.fromEntries(DATA.traits.map(t=>[t.name,t]));
-  const LS='ewc_set18_builds_v1', DRAFT='ewc_set18_draft_v1', COL='ewc_set18_fold_col_v1';
+  const LS='ewc_'+CFG.set+'_builds_v1', DRAFT='ewc_'+CFG.set+'_draft_v1', COL='ewc_'+CFG.set+'_fold_col_v1';
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   let builds=[], folders=[];
@@ -739,8 +749,8 @@ renderComps();
       const a=activeTier(t,cnt[name]);
       return {name,count:cnt[name],icon:t.iconData,...a};
     });
-    // Eclipse hidden combo
-    if(cnt['Solar']&&cnt['Lunar']){const ec=traitByName['Eclipse']||{};rows.push({name:'Eclipse',count:Math.min(cnt['Solar'],cnt['Lunar']),icon:ec.iconData,on:true,style:'unique',eclipse:true,nextMin:null});}
+    // hidden combo trait (config-driven; e.g. Set 18 Eclipse = Solar+Lunar)
+    if(CFG.hidden&&cnt[CFG.hidden.a]&&cnt[CFG.hidden.b]){const h=CFG.hidden,ec=traitByName[h.name]||{};rows.push({name:h.name,count:Math.min(cnt[h.a],cnt[h.b]),icon:ec.iconData,on:true,style:'unique',eclipse:true,nextMin:null});}
     rows.sort((a,b)=>(b.on-a.on)||(b.count-a.count)||a.name.localeCompare(b.name));
     return rows;
   }
@@ -834,9 +844,9 @@ renderComps();
   function delBuild(){if(!cur.id)return;builds=builds.filter(x=>x.id!==cur.id);persist();newBuild();msg('Build deleted.');}
   async function exportBuilds(){
     if(!builds.length){msg('Nothing to export yet.');return;}
-    const payload=JSON.stringify({app:'ewc-set18-builds',v:1,builds,folders},null,2);
+    const payload=JSON.stringify({app:'ewc-'+CFG.set+'-builds',v:1,builds,folders},null,2);
     let dl=null;try{if(window.claude&&claude.use)dl=await claude.use('downloads');}catch(e){}
-    if(dl){try{await dl.save({filename:'set18-builds.json',data:payload});msg('Exported '+builds.length+' builds.');return;}catch(e){}}
+    if(dl){try{await dl.save({filename:'set'+CFG.set+'-builds.json',data:payload});msg('Exported '+builds.length+' builds.');return;}catch(e){}}
     try{await navigator.clipboard.writeText(payload);msg('Copied '+builds.length+' builds to clipboard (paste to save).');}
     catch(e){console.log(payload);msg('Export unavailable here — builds JSON logged to console.');}
   }
@@ -880,5 +890,11 @@ btn.addEventListener('click',()=>{const cur=mode==null?(sysDark()?'dark':'light'
 apply();
 </script>'''
 
-open('set18_explorer.html','w',encoding='utf-8').write(HTML.replace('__DATA__',DATA))
-print('wrote set18_explorer.html', round(len(HTML)/1048576,2),'MB')
+HTML = (HTML.replace('__CFG__', CFG)
+            .replace('__DATA__', DATA)
+            .replace('__TITLE__', config.CODEX_TITLE)
+            .replace('__SET__', str(config.SET))
+            .replace('__CALLOUTS__', CALLOUTS)
+            .replace('__FOOTER__', FOOTER))
+open(config.HTML,'w',encoding='utf-8').write(HTML)
+print('wrote', config.HTML, round(len(HTML)/1048576,2),'MB')

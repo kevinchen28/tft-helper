@@ -1,7 +1,7 @@
-metatft_set18.json
-mt_comps_data.json
-mt_comps_stats.json
-set18_explorer.html
+metatft_set*.json
+mt_comps_*.json
+set*_explorer.html
 _site/
 __pycache__/
 data_source.txt
+check.js

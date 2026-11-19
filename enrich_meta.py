@@ -1,9 +1,9 @@
-import json, urllib.request, base64, ssl
+import json, urllib.request, base64, ssl, config
 from collections import defaultdict
 ctx=ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
 
-m=json.load(open('metatft_set18.json',encoding='utf-8'))
-full=json.load(open('set18_full.json',encoding='utf-8'))
+m=json.load(open(config.DUMP,encoding='utf-8'))
+full=json.load(open(config.DATA,encoding='utf-8'))
 comps=json.load(open('mt_comps_data.json',encoding='utf-8'))['results']['data']['cluster_details']
 
 amap={}
@@ -65,8 +65,8 @@ for c in full['champions']:
     mm=meta.get(c['name'])
     if mm: c['meta']=mm; hit+=1
 full['itemIcons']=icons
-json.dump(full,open('set18_full.json','w',encoding='utf-8'),ensure_ascii=False)
+json.dump(full,open(config.DATA,'w',encoding='utf-8'),ensure_ascii=False)
 import os
 print('champions with meta:',hit,'/',len(full['champions']),' item icons:',len(icons),'/',len(iconset))
-print('size MB:',round(os.path.getsize('set18_full.json')/1048576,2))
+print('size MB:',round(os.path.getsize(config.DATA)/1048576,2))
 print('S/A tier carries:',[ (nm,meta[nm]['tier'],meta[nm]['avg']) for nm in rank if meta[nm]['tier'] in ('S','A')][:12])

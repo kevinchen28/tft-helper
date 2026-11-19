@@ -1,8 +1,8 @@
-import json, re, urllib.request, base64, ssl
+import json, re, urllib.request, base64, ssl, config
 ctx=ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
 
-m=json.load(open('metatft_set18.json',encoding='utf-8'))
-full=json.load(open('set18_full.json',encoding='utf-8'))
+m=json.load(open(config.DUMP,encoding='utf-8'))
+full=json.load(open(config.DATA,encoding='utf-8'))
 raw=json.load(open('mt_comps_data.json',encoding='utf-8'))['results']['data']['cluster_details']
 stats={s.get('cluster'):s.get('count') for s in json.load(open('mt_comps_stats.json',encoding='utf-8'))['results'] if s.get('cluster')}
 
@@ -16,6 +16,8 @@ iapi={x['name']:x['apiName'] for x in m['items']}
 portrait={c['name']:c.get('portrait') for c in full['champions']}
 ticon={t['name']:t.get('iconData') for t in full['traits']}
 icons=full.get('itemIcons',{})
+champ_names={c['name'] for c in full['champions']}  # real playable champs only
+# non-champion board pieces (music instruments etc.) appear in comps but aren't in the roster
 
 def strip_tier(tok): return re.sub(r'_\d+$','',tok.strip())
 
@@ -26,7 +28,7 @@ for cid,c in raw.items():
     carryset={b['unit'] for b in c.get('builds',[]) if b.get('num_items',0)>=2}
     for tok in [t.strip() for t in c.get('units_string','').split(',') if t.strip()]:
         info=amap.get(tok)
-        if not info: continue
+        if not info or info['name'] not in champ_names: continue  # skip instruments/non-champ pieces
         units.append({'name':info['name'],'cost':info['cost'],
                       'star3':tok in starset,'carry':tok in carryset})
     traits=[]
@@ -37,7 +39,7 @@ for cid,c in raw.items():
     for b in sorted(c.get('builds',[]),key=lambda b:-(b.get('count',0) or 0)):
         if b.get('num_items',0)<2: continue
         info=amap.get(b['unit'])
-        if not info: continue
+        if not info or info['name'] not in champ_names: continue
         its=[iname.get(x,x) for x in (b.get('buildName') or []) if isinstance(x,str)]
         for it in its: needicons.add(it)
         carries.append({'name':info['name'],'cost':info['cost'],'avg':round(b.get('avg',0),2),'items':its})
@@ -76,9 +78,9 @@ try:
     full['source']=open('data_source.txt',encoding='utf-8').read().strip() or 'PBE'
 except Exception:
     full['source']='PBE'
-json.dump(full,open('set18_full.json','w',encoding='utf-8'),ensure_ascii=False)
+json.dump(full,open(config.DATA,'w',encoding='utf-8'),ensure_ascii=False)
 import os
 print('comps:',len(comps),'| new item icons:',added,'| total icons:',len(icons))
-print('size MB:',round(os.path.getsize('set18_full.json')/1048576,2))
+print('size MB:',round(os.path.getsize(config.DATA)/1048576,2))
 for c in comps[:6]:
     print('  %6dg %.2f %-6s %-22s units:%d carries:%s'%(c['games'],c['avg'],c['level'],c['name'],len(c['units']),[x['name'] for x in c['carries']]))

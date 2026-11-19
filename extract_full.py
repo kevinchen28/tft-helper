@@ -1,14 +1,29 @@
-import json, re, html, urllib.request, base64, ssl
+import json, re, html, urllib.request, base64, ssl, config
 
 ctx = ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
-M = json.load(open('metatft_set18.json', encoding='utf-8'))
-# trait icons are cached in the committed set18_full.json (all 36 are stable for the set)
+M = json.load(open(config.DUMP, encoding='utf-8'))
+# trait icons are cached in the committed dataset; missing ones are fetched below
 try:
-    _prev_icons = json.load(open('set18_full.json', encoding='utf-8'))
+    _prev_icons = json.load(open(config.DATA, encoding='utf-8'))
     trait_icon = {t['name']: t.get('iconData') for t in _prev_icons.get('traits', []) if t.get('iconData')}
 except Exception:
     trait_icon = {}
 roles = M['roles']
+
+def fetch_trait_icon(name):
+    # best-effort: pull a trait's icon (cached ones skip this). Tries MetaTFT's CDN
+    # first (current for new sets), then CommunityDragon. None -> UI shows a letter badge.
+    slug=re.sub(r'[^a-z0-9]','',name.lower())
+    urls=[f'https://cdn.metatft.com/cdn-cgi/image/width=64,height=64,format=webp,quality=85/https://cdn.metatft.com/file/metatft/traits/tft{config.SET}_{slug}.png']
+    urls+= [f'https://raw.communitydragon.org/{br}/game/assets/ux/traiticons/trait_icon_{config.SET}_{slug}.png' for br in ('latest','pbe')]
+    for url in urls:
+        try:
+            d=urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=20,context=ctx).read()
+            if len(d)>200 and d[:4]!=b'<!DO':
+                mime='image/webp' if d[:4]==b'RIFF' else 'image/png'
+                return f'data:{mime};base64,'+base64.b64encode(d).decode()
+        except Exception: pass
+    return None
 
 STYLE = {1:'bronze', 3:'silver', 4:'gold', 5:'prismatic', 6:'unique'}
 
@@ -68,7 +83,8 @@ apiname = {u['apiName']: u.get('name') for u in M['units']}
 traits=[]
 for t in M['traits']:
     name=t['name']
-    cat = 'Hidden' if name=='Eclipse' else t.get('type','origin').capitalize()
+    _hid = config.HIDDEN_TRAIT and name==config.HIDDEN_TRAIT.get('name')
+    cat = 'Hidden' if _hid else (t.get('type') or 'origin').capitalize()
     curve=t.get('curveTable',{})
     bps=[{'min':e['minUnits'],'style':STYLE.get(e.get('style'),'bronze')} for e in t.get('effects',[]) if e.get('minUnits') is not None]
     rows=[]
@@ -79,11 +95,11 @@ for t in M['traits']:
     # header: lead of main desc before first breakpoint marker
     head=resolve(re.split(r'\(@?\d', t.get('desc') or '')[0], {}, curve)
     head=re.sub(r'<[^>]+>','',head).strip()
-    units=sorted({apiname.get(x['unit'], x['unit'].replace('TFT18_','')) : x['unit_cost'] for x in t.get('units',[])}.items(), key=lambda kv:(kv[1],kv[0]))
+    units=sorted({apiname.get(x['unit'], x['unit'].replace(config.PREFIX,'')) : x['unit_cost'] for x in t.get('units',[])}.items(), key=lambda kv:(kv[1],kv[0]))
     traits.append({'name':name,'cat':cat,'breakpoints':bps,
                    'desc':{'header':head,'rows':rows},
                    'units':[{'name':n,'cost':c} for n,c in units],
-                   'iconData':trait_icon.get(name)})
+                   'iconData':trait_icon.get(name) or fetch_trait_icon(name)})
 
 # ---- champions ----
 def parse_role(role):
@@ -96,7 +112,7 @@ def parse_role(role):
 
 seen=set(); champs=[]
 for u in M['units']:
-    if str(u.get('cost')) not in ('1','2','3','4','5') or not u.get('traits'): continue
+    if not (isinstance(u.get('cost'),int) and 1<=u['cost']<=config.MAX_COST) or not u.get('traits'): continue
     if u['name'] in seen: continue
     seen.add(u['name'])
     dmg,arch,tank = parse_role(u.get('role',''))
@@ -130,7 +146,7 @@ def fetch(api):
 # reuse cached images across runs so loop cycles don't re-download everything
 prevP={}; prevIcons={}
 try:
-    _p=json.load(open('set18_full.json',encoding='utf-8'))
+    _p=json.load(open(config.DATA,encoding='utf-8'))
     prevP={x['name']:x.get('portrait') for x in _p.get('champions',[]) if x.get('portrait')}
     prevIcons=_p.get('itemIcons',{})
 except Exception: pass
@@ -143,16 +159,18 @@ for c in champs:
     if img: c['portrait']=img; ok+=1
     else: fail.append(c['name'])
 
-out={'setName':'Enchanted Wilds','setNumber':18,
-     'traits':sorted(traits,key=lambda t:({'Origin':0,'Class':1,'Unique':2,'Hidden':3}[t['cat']],t['name'])),
+out={'setName':config.SET_NAME,'setNumber':config.SET,
+     'traits':sorted(traits,key=lambda t:({'Origin':0,'Class':1,'Unique':2,'Hidden':3}.get(t['cat'],9),t['name'])),
      'champions':sorted(champs,key=lambda c:(c['cost'],c['name'])),
      'itemIcons':prevIcons}   # carried forward; enrich_meta/extract_comps top up
-json.dump(out,open('set18_full.json','w',encoding='utf-8'),ensure_ascii=False)
+json.dump(out,open(config.DATA,'w',encoding='utf-8'),ensure_ascii=False)
 import os
 print(f'champions:{len(champs)} traits:{len(traits)} portraits:{ok}/{len(champs)} (cached {cached}) fail:{fail}')
-print('size MB:', round(os.path.getsize('set18_full.json')/1048576,2))
-# sample resolved ability
-dv=[c for c in champs if c['name']=='Veigar'][0]
-print('--- Veigar:',dv['ability']['name']); print(dv['ability']['desc'][:300])
-el=[t for t in traits if t['name']=='Elderwood'][0]
-print('--- Elderwood rows:'); [print('  ',r) for r in el['desc']['rows']]
+print('size MB:', round(os.path.getsize(config.DATA)/1048576,2))
+# sample resolved ability + trait (first available, set-agnostic)
+if champs:
+    dv=sorted(champs,key=lambda c:-c['cost'])[0]
+    print('--- sample champ', dv['name'],'::',dv['ability'].get('name')); print(dv['ability'].get('desc','')[:300])
+_wt=[t for t in traits if t['desc']['rows']]
+if _wt:
+    print('--- sample trait', _wt[0]['name'],'rows:'); [print('  ',r) for r in _wt[0]['desc']['rows'][:5]]

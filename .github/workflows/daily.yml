@@ -33,20 +33,26 @@ jobs:
       - name: Refresh data + QA gate
         run: bash run_refresh.sh
 
-      - name: Build page
+      - name: Build Codex page
         run: python build_full.py
+
+      - name: Build opener finder page
+        run: |
+          python build_openers_data.py
+          python build_openers_page.py
 
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp set18_explorer.html _site/index.html
+          cp "$(python -c 'import config;print(config.HTML)')"    _site/index.html
+          cp "$(python -c 'import config;print(config.OPENERS)')" _site/openers.html
 
       # Persist refreshed data + newly-cached images so tomorrow starts from today.
       - name: Commit refreshed data
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add set18_full.json last_fingerprint.txt
+          git add "$(python -c 'import config;print(config.DATA)')" last_fingerprint.txt
           git commit -m "chore: daily data refresh [skip ci]" || echo "no data change"
           git push || echo "nothing to push"
 

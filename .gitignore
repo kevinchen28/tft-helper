@@ -1,6 +1,8 @@
 metatft_set*.json
 mt_comps_*.json
 set*_explorer.html
+set*_openers.html
+openers_page.json
 _site/
 __pycache__/
 data_source.txt

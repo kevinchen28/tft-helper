@@ -26,6 +26,7 @@ COST_COLORS = {1: "#8a9a8d", 2: "#3fae6a", 3: "#2f8fd4", 4: "#a06fe0",
 # Derived — do not edit
 DUMP   = f"metatft_set{SET}.json"       # champion/trait/item dump (written by run_refresh.sh)
 DATA   = f"set{SET}_full.json"          # assembled dataset
-HTML   = f"set{SET}_explorer.html"      # built page
+HTML   = f"set{SET}_explorer.html"      # built page (main Codex)
+OPENERS = f"set{SET}_openers.html"      # built page (early-game opener finder)
 PREFIX = f"TFT{SET}_"                   # apiName prefix
 TFT_SET = f"TFTSet{SET}"                # tft_set identifier in MetaTFT responses

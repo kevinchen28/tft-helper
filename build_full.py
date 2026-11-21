@@ -75,6 +75,9 @@ h1{font-size:clamp(32px,5.5vw,54px);margin:.1em 0 .12em;line-height:1.02;font-we
 .tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font-size:15px;font-weight:600;
   padding:10px 16px;cursor:pointer;margin-bottom:-1px;}
 .tab:hover{color:var(--text)} .tab[aria-selected="true"]{color:var(--green-ink);border-color:var(--green);}
+.tab-link{text-decoration:none;margin-left:auto;display:inline-flex;align-items:center;gap:5px;color:var(--gold-ink,var(--green-ink))}
+.tab-link:hover{color:var(--text);border-color:var(--gold,var(--green))}
+.tab-link .ar{font-size:12px;opacity:.75}
 
 .controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:18px 0;position:sticky;top:0;z-index:6;
   padding:12px 0;background:linear-gradient(var(--bg),var(--bg) 72%,transparent);}
@@ -351,6 +354,7 @@ footer b{color:var(--muted)}
     <button class="tab" role="tab" aria-selected="false" data-view="traits">Traits</button>
     <button class="tab" role="tab" aria-selected="false" data-view="comps">Comps</button>
     <button class="tab" role="tab" aria-selected="false" data-view="builder">Builder</button>
+    <a class="tab tab-link" id="openersTab" href="openers.html" hidden title="Best level 4-5 opening boards">Openers <span class="ar">&#8599;</span></a>
   </div>
 
   <!-- CHAMPIONS -->
@@ -486,6 +490,8 @@ const CFG = __CFG__;
  const sp=document.getElementById('srcPill');
  if(sp){sp.textContent=isLive?'LIVE':'PBE';sp.className='srcpill '+(isLive?'live':'pbe');sp.title=isLive?'Live ranked data':'PBE data — pre-launch, will shift';}
  const sf=document.getElementById('srcFoot'); if(sf) sf.textContent=isLive?'live ranked comps':'PBE ranked comps (pre-launch, early data)';}
+// The opener finder deploys as a sibling page (openers.html) only on the live site; show its link there.
+try{const ot=document.getElementById('openersTab'); if(ot&&(location.hostname.endsWith('github.io')||location.protocol==='file:'))ot.hidden=false;}catch(e){}
 document.getElementById('sChamp').textContent = DATA.champions.length;
 document.getElementById('sTrait').textContent = DATA.traits.length;
 document.getElementById('sCarry').textContent = DATA.champions.filter(c=>c.carry).length;

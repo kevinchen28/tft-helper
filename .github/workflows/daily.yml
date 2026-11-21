@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}    # run on demand from the Actions tab
 
 permissions:
-  contents: write   # commit refreshed data back
+  contents: read    # CI only reads the repo — it never commits back (prevents local divergence)
   pages: write      # publish to GitHub Pages
   id-token: write   # required by deploy-pages
 
@@ -47,14 +47,10 @@ jobs:
           cp "$(python -c 'import config;print(config.HTML)')"    _site/index.html
           cp "$(python -c 'import config;print(config.OPENERS)')" _site/openers.html
 
-      # Persist refreshed data + newly-cached images so tomorrow starts from today.
-      - name: Commit refreshed data
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$(python -c 'import config;print(config.DATA)')" last_fingerprint.txt
-          git commit -m "chore: daily data refresh [skip ci]" || echo "no data change"
-          git push || echo "nothing to push"
+      # NOTE: CI intentionally does NOT commit the rebuilt data back to the repo.
+      # The committed set{N}_full.json is the image-cache seed; each run reads it,
+      # fetches only new/missing images, deploys, and discards the working changes.
+      # Keeping main free of bot commits is what stops local merge conflicts.
 
       - uses: actions/upload-pages-artifact@v3
         with:
